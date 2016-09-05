@@ -85,6 +85,21 @@ class LedgerTestCase(unittest.TestCase):
         self.assertEqual(-10000,
                          json.loads(self._get_account('320').data)['balance'])
 
+    def test_record_empty_transaction(self):
+        self._create_account('101', 'Cash', 'asset')
+        self._create_account('320', 'Share Capital', 'equity')
+
+        response = self._post_json(
+            '/transactions',
+            {
+                'date': '2016-09-01',
+                'description': 'An empty transaction',
+                'items': []
+            }
+        )
+
+        self.assertEqual(400, response.status_code)
+
     def _create_account(self, code, name, type):
         return self._post_json('/accounts', {'code': code, 'name': name,
                                              'type': type})

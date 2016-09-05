@@ -89,6 +89,9 @@ def create_account():
 
 @app.route('/transactions', methods=['POST'])
 def record_transaction():
+    if not request.json['items']:
+        return 'Cannot record an empty transaction', 400
+
     database.record_transaction(request.json['date'],
                                 request.json['description'],
                                 request.json['items'])
