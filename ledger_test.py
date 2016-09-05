@@ -168,6 +168,32 @@ class LedgerTestCase(unittest.TestCase):
         )
         self.assertEqual(400, response.status_code)
 
+    def test_get_transaction(self):
+        self._create_account('101', 'Cash', 'asset')
+        self._create_account('320', 'Share Capital', 'equity')
+        response = self._record_transaction(
+            '2016-09-01',
+            "Record the founder's investment",
+            [
+                {'account_code': '101', 'amount': 10000},
+                {'account_code': '320', 'amount': -10000}
+            ]
+        )
+
+        transaction_id = int(response.data)
+
+        response = self.app.get('/transactions/{}'.format(transaction_id))
+        self.assertEqual(200, response.status_code)
+        self.assertJson({
+            'date': '2016-09-01',
+            'description': "Record the founder's investment",
+            'items': [
+                {'account_code': '101', 'amount': 10000},
+                {'account_code': '320', 'amount': -10000}
+            ]},
+            response
+        )
+
     def _create_account(self, code, name, type):
         return self._post_json('/accounts', {'code': code, 'name': name,
                                              'type': type})

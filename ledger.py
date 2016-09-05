@@ -43,7 +43,7 @@ class Database(object):
     def record_transaction(self, date, description, items):
         '''Record a transaction.'''
         try:
-            date = datetime.strptime(date, '%Y-%m-%d').date
+            date = datetime.strptime(date, '%Y-%m-%d').date()
         except ValueError:
             raise DatabaseError(
                 '"{}" is not in the required format "YYYY-MM-DD"'.format(date)
@@ -68,6 +68,14 @@ class Database(object):
         # Update the accounts's balances
         for item in items:
             self.get_account(item['account_code'])['balance'] += item['amount']
+
+        return len(self.transactions)
+
+    def get_transaction(self, id):
+        try:
+            return self.transactions[id - 1]
+        except IndexError:
+            return None
 
 database = Database()
 
@@ -102,6 +110,17 @@ def create_account():
         return str(exc), 409
 
 
+@app.route('/transactions/<int:id>', methods=['GET'])
+def get_transaction(id):
+    transaction = database.get_transaction(id)
+    if transaction:
+        return jsonify({
+            'date': transaction['date'].strftime('%Y-%m-%d'),
+            'description': transaction['description'],
+            'items': transaction['items']
+        })
+
+
 @app.route('/transactions', methods=['POST'])
 def record_transaction():
     if 'date' not in request.json:
@@ -118,10 +137,12 @@ def record_transaction():
         return 'All items must contain "amount"', 400
 
     try:
-        database.record_transaction(request.json['date'],
-                                    request.json['description'],
-                                    request.json['items'])
-        return 'Recorded', 201
+        transaction_id = database.record_transaction(
+            request.json['date'],
+            request.json['description'],
+            request.json['items']
+        )
+        return str(transaction_id), 201
     except DatabaseError as exc:
         return str(exc), 400
 
