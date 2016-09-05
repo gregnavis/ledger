@@ -1,3 +1,4 @@
+from copy import copy
 from datetime import datetime
 
 from flask import Flask, jsonify, request
@@ -29,6 +30,11 @@ class Database(object):
         self.accounts.append({
             'code': code, 'name': name, 'type': type, 'balance': 0
         })
+
+    def get_accounts(self, date):
+        '''Return all accounts.'''
+        return [self._get_account_at(account, date)
+                for account in self.accounts]
 
     def get_account(self, code):
         '''Return the account identified by the specified code.'''
@@ -79,6 +85,24 @@ class Database(object):
             return self.transactions[id - 1]
         except IndexError:
             return None
+
+    def _get_account_at(self, account, date):
+        account = copy(account)
+        account.update({
+            'balance': sum(
+                item['amount']
+                for item in self._get_transaction_items(account['code'], date)
+            )
+        })
+        return account
+
+    def _get_transaction_items(self, account_code, date):
+        for transaction in self.transactions:
+            if transaction['date'] > date:
+                continue
+            for item in transaction['items']:
+                if item['account_code'] == account_code:
+                    yield item
 
 database = Database()
 
@@ -164,6 +188,14 @@ def record_transaction():
         return str(transaction_id), 201
     except DatabaseError as exc:
         return str(exc), 400
+
+
+@app.route('/balance-sheets/<date>', methods=['GET'])
+def get_balance_sheet(date):
+    date = datetime.strptime(date, '%Y-%m-%d').date()
+    return jsonify({
+        'accounts': database.get_accounts(date)
+    })
 
 
 if __name__ == '__main__':

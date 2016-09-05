@@ -247,6 +247,83 @@ class LedgerTestCase(unittest.TestCase):
         response = self.app.get('/transactions/1')
         self.assertEqual(404, response.status_code)
 
+    def test_get_balance_sheet(self):
+        self._create_account('101', 'Cash', 'asset')
+        self._create_account('102', 'Equipment', 'asset')
+        self._create_account('320', 'Share Capital', 'equity')
+        self._record_transaction(
+            '2016-09-01',
+            "Record the founder's investment",
+            [
+                {'account_code': '101', 'amount': 10000},
+                {'account_code': '320', 'amount': -10000}
+            ]
+        )
+        self._record_transaction(
+            '2016-09-10',
+            "Buy a computer",
+            [
+                {'account_code': '101', 'amount': -2000},
+                {'account_code': '102', 'amount': 2000}
+            ]
+        )
+
+        response = self.app.get('/balance-sheets/2016-09-09')
+        self.assertEqual(200, response.status_code)
+        self.assertJson(
+            {
+                'accounts': [
+                    {
+                        'code': '101',
+                        'name': 'Cash',
+                        'type': 'asset',
+                        'balance': 10000
+                    },
+                    {
+                        'code': '102',
+                        'name': 'Equipment',
+                        'type': 'asset',
+                        'balance': 0
+                    },
+                    {
+                        'code': '320',
+                        'name': 'Share Capital',
+                        'type': 'equity',
+                        'balance': -10000
+                    }
+                ]
+            },
+            response
+        )
+
+        response = self.app.get('/balance-sheets/2016-09-10')
+        self.assertEqual(200, response.status_code)
+        self.assertJson(
+            {
+                'accounts': [
+                    {
+                        'code': '101',
+                        'name': 'Cash',
+                        'type': 'asset',
+                        'balance': 8000
+                    },
+                    {
+                        'code': '102',
+                        'name': 'Equipment',
+                        'type': 'asset',
+                        'balance': 2000
+                    },
+                    {
+                        'code': '320',
+                        'name': 'Share Capital',
+                        'type': 'equity',
+                        'balance': -10000
+                    }
+                ]
+            },
+            response
+        )
+
     def _create_account(self, code, name, type):
         return self._post_json('/accounts', {'code': code, 'name': name,
                                              'type': type})
