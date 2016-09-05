@@ -194,6 +194,12 @@ class LedgerTestCase(unittest.TestCase):
             response
         )
 
+    def test_get_transaction_non_existent(self):
+        self._create_account('101', 'Cash', 'asset')
+        self._create_account('320', 'Share Capital', 'equity')
+        response = self.app.get('/transactions/1')
+        self.assertEqual(404, response.status_code)
+
     def _create_account(self, code, name, type):
         return self._post_json('/accounts', {'code': code, 'name': name,
                                              'type': type})

@@ -119,6 +119,8 @@ def get_transaction(id):
             'description': transaction['description'],
             'items': transaction['items']
         })
+    else:
+        return 'Transaction "{}" does not exist'.format(id), 404
 
 
 @app.route('/transactions', methods=['POST'])
