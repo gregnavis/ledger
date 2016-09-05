@@ -43,6 +43,8 @@ def get_account(code):
 
 @app.route('/accounts', methods=['POST'])
 def create_account():
+    if request.json is None:
+        return 'Expected JSON-encoded data', 400
     if 'name' not in request.json:
         return 'Missing "name"', 400
     if 'code' not in request.json:

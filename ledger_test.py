@@ -36,6 +36,11 @@ class LedgerTestCase(unittest.TestCase):
             self._post_json('/accounts', {'name': 'Cash'}).status_code
         )
 
+    def test_create_account_without_json(self):
+        response = self.app.post('/accounts',
+                                 data={'code': '101', 'name': 'Cash'})
+        self.assertEqual(400, response.status_code)
+
     def _create_account(self, code, name):
         return self._post_json('/accounts', {'code': code, 'name': name})
 
