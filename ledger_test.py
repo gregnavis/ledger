@@ -106,6 +106,54 @@ class LedgerTestCase(unittest.TestCase):
 
         self.assertEqual(400, response.status_code)
 
+    def test_record_transaction_incomplete(self):
+        self._create_account('101', 'Cash', 'asset')
+        self._create_account('320', 'Share Capital', 'equity')
+
+        response = self._post_json('/transactions', {
+            'description': "Record the founder's investment",
+            'items': [
+                {'account_code': '101', 'amount': 10000},
+                {'account_code': '320', 'amount': -10000}
+            ]
+        })
+        self.assertEqual(400, response.status_code)
+
+        response = self._post_json('/transactions', {
+            'date': '2016-09-01',
+            'items': [
+                {'account_code': '101', 'amount': 10000},
+                {'account_code': '320', 'amount': -10000}
+            ]
+        })
+        self.assertEqual(400, response.status_code)
+
+        response = self._post_json('/transactions', {
+            'date': '2016-09-01',
+            'description': "Record the founder's investment",
+        })
+        self.assertEqual(400, response.status_code)
+
+        response = self._post_json('/transactions', {
+            'date': '2016-09-01',
+            'description': "Record the founder's investment",
+            'items': [
+                {'account_code': '101', 'amount': 10000},
+                {'amount': -10000}
+            ]
+        })
+        self.assertEqual(400, response.status_code)
+
+        response = self._post_json('/transactions', {
+            'date': '2016-09-01',
+            'description': "Record the founder's investment",
+            'items': [
+                {'account_code': '101', 'amount': 10000},
+                {'account_code': '320'}
+            ]
+        })
+        self.assertEqual(400, response.status_code)
+
     def _create_account(self, code, name, type):
         return self._post_json('/accounts', {'code': code, 'name': name,
                                              'type': type})

@@ -95,8 +95,18 @@ def create_account():
 
 @app.route('/transactions', methods=['POST'])
 def record_transaction():
+    if 'date' not in request.json:
+        return 'Missing "date"', 400
+    if 'description' not in request.json:
+        return 'Missing "description"', 400
+    if 'items' not in request.json:
+        return 'Missing "items"', 400
     if not request.json['items']:
         return 'Cannot record an empty transaction', 400
+    if any('account_code' not in item for item in request.json['items']):
+        return 'All items must contain "account_code"', 400
+    if any('amount' not in item for item in request.json['items']):
+        return 'All items must contain "amount"', 400
 
     try:
         database.record_transaction(request.json['date'],
