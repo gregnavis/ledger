@@ -63,6 +63,28 @@ class LedgerTestCase(unittest.TestCase):
         response = self._get_account('101')
         self.assertEqual(404, response.status_code)
 
+    def test_record_transaction(self):
+        self._create_account('101', 'Cash', 'asset')
+        self._create_account('320', 'Share Capital', 'equity')
+
+        response = self._post_json(
+            '/transactions',
+            {
+                'date': '2016-09-01',
+                'description': "Record the founder's investment",
+                'items': [
+                    {'account_code': '101', 'amount': 10000},
+                    {'account_code': '320', 'amount': -10000}
+                ]
+            }
+        )
+        self.assertEqual(201, response.status_code)
+
+        self.assertEqual(10000,
+                         json.loads(self._get_account('101').data)['balance'])
+        self.assertEqual(-10000,
+                         json.loads(self._get_account('320').data)['balance'])
+
     def _create_account(self, code, name, type):
         return self._post_json('/accounts', {'code': code, 'name': name,
                                              'type': type})

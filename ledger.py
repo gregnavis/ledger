@@ -10,6 +10,7 @@ class Database(object):
     def reset(self):
         '''Reset the database (for testing purposes).'''
         self.accounts = []
+        self.transactions = []
 
     def create_account(self, code, name, type):
         '''Create an account with a given code and name.'''
@@ -34,6 +35,25 @@ class Database(object):
         else:
             return None
 
+    def record_transaction(self, date, description, items):
+        '''Record a transcation.'''
+        if sum(item['amount'] for item in items) != 0:
+            return False
+
+        # Check whether all accounts exist
+        for item in items:
+            if not self.get_account(item['account_code']):
+                return False
+
+        self.transactions.append({
+            'date': date, 'description': description, 'items': items
+        })
+
+        # Update the accounts's balances
+        for item in items:
+            self.get_account(item['account_code'])['balance'] += item['amount']
+
+        return True
 
 database = Database()
 
@@ -65,6 +85,14 @@ def create_account():
         return 'Created', 201
     else:
         return 'Account "{}" already exists'.format(request.json['code']), 409
+
+
+@app.route('/transactions', methods=['POST'])
+def record_transaction():
+    database.record_transaction(request.json['date'],
+                                request.json['description'],
+                                request.json['items'])
+    return 'Recorded', 201
 
 
 if __name__ == '__main__':
