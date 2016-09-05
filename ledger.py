@@ -47,7 +47,11 @@ class Database(object):
         # Check whether all accounts exist
         for item in items:
             if not self.get_account(item['account_code']):
-                return False
+                raise DatabaseError(
+                    'The account "{}" does not exist'.format(
+                        item['account_code']
+                    )
+                )
 
         self.transactions.append({
             'date': date, 'description': description, 'items': items
@@ -56,8 +60,6 @@ class Database(object):
         # Update the accounts's balances
         for item in items:
             self.get_account(item['account_code'])['balance'] += item['amount']
-
-        return True
 
 database = Database()
 
