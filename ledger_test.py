@@ -67,16 +67,13 @@ class LedgerTestCase(unittest.TestCase):
         self._create_account('101', 'Cash', 'asset')
         self._create_account('320', 'Share Capital', 'equity')
 
-        response = self._post_json(
-            '/transactions',
-            {
-                'date': '2016-09-01',
-                'description': "Record the founder's investment",
-                'items': [
-                    {'account_code': '101', 'amount': 10000},
-                    {'account_code': '320', 'amount': -10000}
-                ]
-            }
+        response = self._record_transaction(
+            '2016-09-01',
+            "Record the founder's investment",
+            [
+                {'account_code': '101', 'amount': 10000},
+                {'account_code': '320', 'amount': -10000}
+            ]
         )
         self.assertEqual(201, response.status_code)
 
@@ -89,14 +86,8 @@ class LedgerTestCase(unittest.TestCase):
         self._create_account('101', 'Cash', 'asset')
         self._create_account('320', 'Share Capital', 'equity')
 
-        response = self._post_json(
-            '/transactions',
-            {
-                'date': '2016-09-01',
-                'description': 'An empty transaction',
-                'items': []
-            }
-        )
+        response = self._record_transaction('2016-09-01',
+                                            'An empty transaction', [])
 
         self.assertEqual(400, response.status_code)
 
@@ -106,6 +97,11 @@ class LedgerTestCase(unittest.TestCase):
 
     def _get_account(self, code):
         return self.app.get('/accounts/{}'.format(code))
+
+    def _record_transaction(self, date, description, items):
+        return self._post_json('/transactions', {'date': date,
+                                                 'description': description,
+                                                 'items': items})
 
     def _post_json(self, url, data):
         return self.app.post(url, content_type='application/json',
