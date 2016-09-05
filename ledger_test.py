@@ -9,11 +9,21 @@ class LedgerTestCase(unittest.TestCase):
         ledger.app.config['TESTING'] = True
         self.app = ledger.app.test_client()
 
+    def tearDown(self):
+        ledger.database.reset()
+
     def test_create_account(self):
-        self._create_account('101', 'Cash')
+        self.assertEqual(200, self._create_account('101', 'Cash').status_code)
         self.assertEqual(
             {'name': 'Cash', 'code': '101', 'balance': 0},
             self._get_account('101')
+        )
+
+    def test_create_account_twice(self):
+        self._create_account('101', 'Cash')
+        self.assertEqual(
+            409,
+            self._create_account('101', 'Cash').status_code
         )
 
     def test_incomplete_create_account(self):
@@ -27,8 +37,7 @@ class LedgerTestCase(unittest.TestCase):
         )
 
     def _create_account(self, code, name):
-        response = self._post_json('/accounts', {'code': code, 'name': name})
-        self.assertEqual(200, response.status_code)
+        return self._post_json('/accounts', {'code': code, 'name': name})
 
     def _get_account(self, code):
         response = self.app.get('/accounts/{}'.format(code))
