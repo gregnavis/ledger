@@ -1,0 +1,84 @@
+{% extends "layout.html" %}
+{% block body %}
+  <div class="container">
+    <h1>Balance Sheet <small>at {{ balance_sheet.date }}</small></h1>
+
+    <h2>Assets</h2>
+
+    <table class="table">
+      <thead>
+        <tr>
+          <th class="number">Number</th>
+          <th>Name</th>
+          <th class="balance">Balance</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for account in balance_sheet.asset %}
+          <tr>
+            <td class="number">{{ account.code }}</td>
+            <td>{{ account.name }}</td>
+            <td class="balance">{{ account.balance | monetize }}</td>
+          </tr>
+        {% endfor %}
+        <tr class="total">
+          <td></td>
+          <td>Total Assets</td>
+          <td class="balance">{{ balance_sheet.asset | map(attribute='balance') | sum | monetize }}</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>Liabilities</h2>
+
+    <table class="table">
+      <thead>
+        <tr>
+          <th class="number">Number</th>
+          <th>Name</th>
+          <th class="balance">Balance</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for account in balance_sheet.liability %}
+          <tr>
+            <td class="number">{{ account.code }}</td>
+            <td>{{ account.name }}</td>
+            <td class="balance">{{ account.balance | monetize }}</td>
+          </tr>
+        {% endfor %}
+        <tr class="total">
+          <td></td>
+          <td>Total Liabilities</td>
+          <td class="balance">{{ balance_sheet.liability | map(attribute='balance') | sum | monetize }}</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>Equity</h2>
+
+    <table class="table">
+      <thead>
+        <tr>
+          <th class="number">Number</th>
+          <th>Name</th>
+          <th class="balance">Balance</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for account in balance_sheet.equity %}
+          <tr>
+            <td class="number">{{ account.code }}</td>
+            <td>{{ account.name }}</td>
+            <td class="balance">{{ account.balance | monetize }}</td>
+          </tr>
+        {% endfor %}
+        <tr class="total">
+          <td></td>
+          <td>Total Equity</td>
+          <td class="balance">{{ balance_sheet.equity | map(attribute='balance') | sum | monetize }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+{% endblock %}

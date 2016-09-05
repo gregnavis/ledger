@@ -1,7 +1,10 @@
 from copy import copy
 from datetime import datetime
+from decimal import Decimal
+import locale
+import re
 
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, render_template, request
 
 app = Flask(__name__)
 
@@ -35,6 +38,17 @@ class Database(object):
         '''Return all accounts.'''
         return [self._get_account_at(account, date)
                 for account in self.accounts]
+
+    def get_balance_sheet(self, date):
+        '''Return a balance sheet.'''
+        accounts = self.get_accounts(date)
+        balance_sheet = {
+            'date': date.strftime('%d.%m.%Y'), 'asset': [], 'liability': [],
+            'equity': []
+        }
+        for account in accounts:
+            balance_sheet[account['type']].append(account)
+        return balance_sheet
 
     def get_account(self, code):
         '''Return the account identified by the specified code.'''
@@ -115,6 +129,13 @@ def _transaction_to_json(transaction):
     }
 
 
+@app.template_filter('monetize')
+def monetize(value):
+    value = Decimal(value) / 100
+    locale.setlocale(locale.LC_MONETARY, 'en_US')
+    return locale.currency(value, False, True)
+
+
 @app.route('/accounts/<code>', methods=['GET'])
 def get_account(code):
     account = database.get_account(code)
@@ -190,12 +211,17 @@ def record_transaction():
         return str(exc), 400
 
 
-@app.route('/balance-sheets/<date>', methods=['GET'])
-def get_balance_sheet(date):
+@app.route('/balance-sheets/<date>.json', methods=['GET'])
+def get_json_balance_sheet(date):
     date = datetime.strptime(date, '%Y-%m-%d').date()
-    return jsonify({
-        'accounts': database.get_accounts(date)
-    })
+    return jsonify(database.get_balance_sheet(date))
+
+
+@app.route('/balance-sheets/<date>.html', methods=['GET'])
+def get_html_balance_sheet(date):
+    date = datetime.strptime(date, '%Y-%m-%d').date()
+    return render_template('balance_sheet.html',
+                           balance_sheet=database.get_balance_sheet(date))
 
 
 if __name__ == '__main__':

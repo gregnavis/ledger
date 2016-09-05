@@ -268,11 +268,12 @@ class LedgerTestCase(unittest.TestCase):
             ]
         )
 
-        response = self.app.get('/balance-sheets/2016-09-09')
+        response = self.app.get('/balance-sheets/2016-09-09.json')
         self.assertEqual(200, response.status_code)
         self.assertJson(
             {
-                'accounts': [
+                'date': '09.09.2016',
+                'asset': [
                     {
                         'code': '101',
                         'name': 'Cash',
@@ -285,6 +286,9 @@ class LedgerTestCase(unittest.TestCase):
                         'type': 'asset',
                         'balance': 0
                     },
+                ],
+                'liability': [],
+                'equity': [
                     {
                         'code': '320',
                         'name': 'Share Capital',
@@ -296,11 +300,12 @@ class LedgerTestCase(unittest.TestCase):
             response
         )
 
-        response = self.app.get('/balance-sheets/2016-09-10')
+        response = self.app.get('/balance-sheets/2016-09-10.json')
         self.assertEqual(200, response.status_code)
         self.assertJson(
             {
-                'accounts': [
+                'date': '10.09.2016',
+                'asset': [
                     {
                         'code': '101',
                         'name': 'Cash',
@@ -313,6 +318,9 @@ class LedgerTestCase(unittest.TestCase):
                         'type': 'asset',
                         'balance': 2000
                     },
+                ],
+                'liability': [],
+                'equity': [
                     {
                         'code': '320',
                         'name': 'Share Capital',
@@ -343,6 +351,15 @@ class LedgerTestCase(unittest.TestCase):
     def assertJson(self, expected_json, response):
         self.assertEqual('application/json', response.content_type)
         self.assertEqual(expected_json, json.loads(response.data))
+
+
+class MonetizeTestCase(unittest.TestCase):
+    def test_monetize(self):
+        self.assertEquals('0.00', ledger.monetize(0))
+        self.assertEquals('0.01', ledger.monetize(1))
+        self.assertEquals('1.00', ledger.monetize(100))
+        self.assertEquals('1,234.00', ledger.monetize(123400))
+        self.assertEquals('-1,000.00', ledger.monetize(-100000))
 
 
 if __name__ == '__main__':

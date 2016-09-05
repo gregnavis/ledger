@@ -1,0 +1,20 @@
+th.number {
+  width: 5%;
+}
+
+td.number {
+  text-align: center;
+}
+
+th.balance {
+  text-align: right;
+  width: 25%;
+}
+
+td.balance {
+  text-align: right;
+}
+
+tr.total {
+  font-style: italic;
+}
