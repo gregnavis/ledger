@@ -38,7 +38,11 @@ database = Database()
 
 @app.route('/accounts/<code>', methods=['GET'])
 def get_account(code):
-    return jsonify(database.get_account(code))
+    account = database.get_account(code)
+    if account:
+        return jsonify(account)
+    else:
+        return 'Account "{}" does not exist'.format(code), 404
 
 
 @app.route('/accounts', methods=['POST'])
