@@ -38,6 +38,10 @@ def get_account(code):
 
 @app.route('/accounts', methods=['POST'])
 def create_account():
+    if 'name' not in request.json:
+        return 'Missing "name"', 400
+    if 'code' not in request.json:
+        return 'Missing "code"', 400
     database.create_account(request.json['code'], request.json['name'])
     return 'Created'
 

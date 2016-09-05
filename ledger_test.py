@@ -16,6 +16,16 @@ class LedgerTestCase(unittest.TestCase):
             self._get_account('101')
         )
 
+    def test_incomplete_create_account(self):
+        self.assertEqual(
+            400,
+            self._post_json('/accounts', {'code': '101'}).status_code
+        )
+        self.assertEqual(
+            400,
+            self._post_json('/accounts', {'name': 'Cash'}).status_code
+        )
+
     def _create_account(self, code, name):
         response = self._post_json('/accounts', {'code': code, 'name': name})
         self.assertEqual(200, response.status_code)
