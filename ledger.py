@@ -11,7 +11,7 @@ class Database(object):
         '''Reset the database (for testing purposes).'''
         self.accounts = []
 
-    def create_account(self, code, name):
+    def create_account(self, code, name, type):
         '''Create an account with a given code and name.'''
         code = str(code)
         name = str(name)
@@ -19,7 +19,9 @@ class Database(object):
         if self.get_account(code):
             return False
 
-        self.accounts.append({'code': code, 'name': name, 'balance': 0})
+        self.accounts.append({
+            'code': code, 'name': name, 'type': type, 'balance': 0
+        })
         return True
 
     def get_account(self, code):
@@ -53,7 +55,13 @@ def create_account():
         return 'Missing "name"', 400
     if 'code' not in request.json:
         return 'Missing "code"', 400
-    if database.create_account(request.json['code'], request.json['name']):
+    if 'type' not in request.json:
+        return 'Missing "type"', 400
+    if request.json['type'] not in ('asset', 'liability', 'equity'):
+        return '"type" must be one of "asset", "liability", "equity"', 400
+
+    if database.create_account(request.json['code'], request.json['name'],
+                               request.json['type']):
         return 'Created', 201
     else:
         return 'Account "{}" already exists'.format(request.json['code']), 409
