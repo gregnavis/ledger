@@ -22,12 +22,11 @@ class Database(object):
         name = str(name)
 
         if self.get_account(code):
-            return False
+            raise DatabaseError('The account "{}" already exists'.format(code))
 
         self.accounts.append({
             'code': code, 'name': name, 'type': type, 'balance': 0
         })
-        return True
 
     def get_account(self, code):
         '''Return the account identified by the specified code.'''
@@ -86,11 +85,12 @@ def create_account():
     if request.json['type'] not in ('asset', 'liability', 'equity'):
         return '"type" must be one of "asset", "liability", "equity"', 400
 
-    if database.create_account(request.json['code'], request.json['name'],
-                               request.json['type']):
+    try:
+        database.create_account(request.json['code'], request.json['name'],
+                                request.json['type'])
         return 'Created', 201
-    else:
-        return 'Account "{}" already exists'.format(request.json['code']), 409
+    except DatabaseError as exc:
+        return str(exc), 409
 
 
 @app.route('/transactions', methods=['POST'])
