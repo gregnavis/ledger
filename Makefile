@@ -10,3 +10,7 @@ pep8:
 .PHONY: test
 test:
 	python ledger_test.py
+
+.PHONY: setup
+setup:
+	ln -sf ../../precommit ./.git/hooks/pre-commit
