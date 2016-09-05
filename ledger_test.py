@@ -17,8 +17,7 @@ class LedgerTestCase(unittest.TestCase):
         )
 
     def _create_account(self, code, name):
-        response = self.app.post('/accounts', content_type='application/json',
-                                 data=json.dumps({'code': code, 'name': name}))
+        response = self._post_json('/accounts', {'code': code, 'name': name})
         self.assertEqual(200, response.status_code)
 
     def _get_account(self, code):
@@ -26,6 +25,10 @@ class LedgerTestCase(unittest.TestCase):
         self.assertEqual(200, response.status_code)
         self.assertEqual('application/json', response.content_type)
         return json.loads(response.data)
+
+    def _post_json(self, url, data):
+        return self.app.post(url, content_type='application/json',
+                             data=json.dumps(data))
 
 
 if __name__ == '__main__':
