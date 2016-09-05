@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from flask import Flask, jsonify, request
 
 app = Flask(__name__)
@@ -40,6 +42,13 @@ class Database(object):
 
     def record_transaction(self, date, description, items):
         '''Record a transaction.'''
+        try:
+            date = datetime.strptime(date, '%Y-%m-%d').date
+        except ValueError:
+            raise DatabaseError(
+                '"{}" is not in the required format "YYYY-MM-DD"'.format(date)
+            )
+
         if sum(item['amount'] for item in items) != 0:
             raise DatabaseError('unbalanced transaction items')
 

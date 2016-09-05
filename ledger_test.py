@@ -154,6 +154,20 @@ class LedgerTestCase(unittest.TestCase):
         })
         self.assertEqual(400, response.status_code)
 
+    def test_record_transaction_with_invalid_date(self):
+        self._create_account('101', 'Cash', 'asset')
+        self._create_account('320', 'Share Capital', 'equity')
+
+        response = self._record_transaction(
+            '20160901',
+            "Record the founder's investment",
+            [
+                {'account_code': '101', 'amount': 10000},
+                {'account_code': '320', 'amount': -10000}
+            ]
+        )
+        self.assertEqual(400, response.status_code)
+
     def _create_account(self, code, name, type):
         return self._post_json('/accounts', {'code': code, 'name': name,
                                              'type': type})
