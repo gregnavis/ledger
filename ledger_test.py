@@ -194,6 +194,53 @@ class LedgerTestCase(unittest.TestCase):
             response
         )
 
+    def test_get_transactions(self):
+        self._create_account('101', 'Cash', 'asset')
+        self._create_account('102', 'Equipment', 'asset')
+        self._create_account('320', 'Share Capital', 'equity')
+        self._record_transaction(
+            '2016-09-01',
+            "Record the founder's investment",
+            [
+                {'account_code': '101', 'amount': 10000},
+                {'account_code': '320', 'amount': -10000}
+            ]
+        )
+        self._record_transaction(
+            '2016-09-02',
+            "Buy a computer",
+            [
+                {'account_code': '101', 'amount': -2000},
+                {'account_code': '102', 'amount': 2000}
+            ]
+        )
+
+        response = self.app.get('/transactions')
+        self.assertEqual(200, response.status_code)
+        self.assertJson(
+            {
+                'transactions': [
+                    {
+                        'date': '2016-09-01',
+                        'description': "Record the founder's investment",
+                        'items': [
+                            {'account_code': '101', 'amount': 10000},
+                            {'account_code': '320', 'amount': -10000}
+                        ],
+                    },
+                    {
+                        'date': '2016-09-02',
+                        'description': "Buy a computer",
+                        'items': [
+                            {'account_code': '101', 'amount': -2000},
+                            {'account_code': '102', 'amount': 2000}
+                        ],
+                    }
+                ]
+            },
+            response
+        )
+
     def test_get_transaction_non_existent(self):
         self._create_account('101', 'Cash', 'asset')
         self._create_account('320', 'Share Capital', 'equity')

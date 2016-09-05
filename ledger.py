@@ -71,6 +71,9 @@ class Database(object):
 
         return len(self.transactions)
 
+    def get_transactions(self):
+        return self.transactions
+
     def get_transaction(self, id):
         try:
             return self.transactions[id - 1]
@@ -78,6 +81,14 @@ class Database(object):
             return None
 
 database = Database()
+
+
+def _transaction_to_json(transaction):
+    return {
+        'date': transaction['date'].strftime('%Y-%m-%d'),
+        'description': transaction['description'],
+        'items': transaction['items']
+    }
 
 
 @app.route('/accounts/<code>', methods=['GET'])
@@ -114,13 +125,19 @@ def create_account():
 def get_transaction(id):
     transaction = database.get_transaction(id)
     if transaction:
-        return jsonify({
-            'date': transaction['date'].strftime('%Y-%m-%d'),
-            'description': transaction['description'],
-            'items': transaction['items']
-        })
+        return jsonify(_transaction_to_json(transaction))
     else:
         return 'Transaction "{}" does not exist'.format(id), 404
+
+
+@app.route('/transactions', methods=['GET'])
+def get_transactions():
+    transactions = database.get_transactions()
+    return jsonify({
+        'transactions': [
+            _transaction_to_json(transaction) for transaction in transactions
+        ]
+    })
 
 
 @app.route('/transactions', methods=['POST'])
