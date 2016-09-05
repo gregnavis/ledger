@@ -48,7 +48,7 @@ def create_account():
     if 'code' not in request.json:
         return 'Missing "code"', 400
     if database.create_account(request.json['code'], request.json['name']):
-        return 'Created'
+        return 'Created', 201
     else:
         return 'Account "{}" already exists'.format(request.json['code']), 409
 

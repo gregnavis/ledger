@@ -13,7 +13,7 @@ class LedgerTestCase(unittest.TestCase):
         ledger.database.reset()
 
     def test_create_account(self):
-        self.assertEqual(200, self._create_account('101', 'Cash').status_code)
+        self.assertEqual(201, self._create_account('101', 'Cash').status_code)
         self.assertEqual(
             {'name': 'Cash', 'code': '101', 'balance': 0},
             self._get_account('101')
