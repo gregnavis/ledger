@@ -14,10 +14,10 @@ class LedgerTestCase(unittest.TestCase):
 
     def test_create_account(self):
         self.assertEqual(201, self._create_account('101', 'Cash').status_code)
-        self.assertEqual(
-            {'name': 'Cash', 'code': '101', 'balance': 0},
-            self._get_account('101')
-        )
+        response = self._get_account('101')
+        self.assertEqual(200, response.status_code)
+        self.assertEqual('application/json', response.content_type)
+        self.assertJson({'name': 'Cash', 'code': '101', 'balance': 0}, response)
 
     def test_create_account_twice(self):
         self._create_account('101', 'Cash')
@@ -40,14 +40,15 @@ class LedgerTestCase(unittest.TestCase):
         return self._post_json('/accounts', {'code': code, 'name': name})
 
     def _get_account(self, code):
-        response = self.app.get('/accounts/{}'.format(code))
-        self.assertEqual(200, response.status_code)
-        self.assertEqual('application/json', response.content_type)
-        return json.loads(response.data)
+        return self.app.get('/accounts/{}'.format(code))
 
     def _post_json(self, url, data):
         return self.app.post(url, content_type='application/json',
                              data=json.dumps(data))
+
+    def assertJson(self, expected_json, response):
+        self.assertEqual('application/json', response.content_type)
+        self.assertEqual(expected_json, json.loads(response.data))
 
 
 if __name__ == '__main__':
