@@ -3,6 +3,10 @@ from flask import Flask, jsonify, request
 app = Flask(__name__)
 
 
+class DatabaseError(RuntimeError):
+    pass
+
+
 class Database(object):
     def __init__(self):
         self.reset()
@@ -36,9 +40,9 @@ class Database(object):
             return None
 
     def record_transaction(self, date, description, items):
-        '''Record a transcation.'''
+        '''Record a transaction.'''
         if sum(item['amount'] for item in items) != 0:
-            return False
+            raise DatabaseError('unbalanced transaction items')
 
         # Check whether all accounts exist
         for item in items:
@@ -92,10 +96,13 @@ def record_transaction():
     if not request.json['items']:
         return 'Cannot record an empty transaction', 400
 
-    database.record_transaction(request.json['date'],
-                                request.json['description'],
-                                request.json['items'])
-    return 'Recorded', 201
+    try:
+        database.record_transaction(request.json['date'],
+                                    request.json['description'],
+                                    request.json['items'])
+        return 'Recorded', 201
+    except DatabaseError as exc:
+        return str(exc), 400
 
 
 if __name__ == '__main__':
