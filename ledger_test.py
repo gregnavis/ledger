@@ -468,6 +468,14 @@ class LedgerTestCase(unittest.TestCase):
                 {'account_code': '501', 'amount': 400},
             ]
         )
+        self._record_transaction(
+            '2016-09-12',
+            'Insurance Premiums',
+            [
+                {'account_code': '101', 'amount': -5200},
+                {'account_code': '501', 'amount': 5200},
+            ]
+        )
 
         response = self.app.get(
             '/income-statements/2016-09-01-to-2016-09-10.json'
@@ -477,6 +485,7 @@ class LedgerTestCase(unittest.TestCase):
             {
                 'start_date': '01.09.2016',
                 'end_date': '10.09.2016',
+                'net_income': 0,
                 'revenue': [
                     {
                         'code': '401',
@@ -505,6 +514,7 @@ class LedgerTestCase(unittest.TestCase):
             {
                 'start_date': '01.09.2016',
                 'end_date': '11.09.2016',
+                'net_income': 4600,
                 'revenue': [
                     {
                         'code': '401',
@@ -519,6 +529,35 @@ class LedgerTestCase(unittest.TestCase):
                         'name': 'Expense',
                         'type': 'expense',
                         'balance': 400
+                    }
+                ]
+            },
+            response
+        )
+
+        response = self.app.get(
+            '/income-statements/2016-09-01-to-2016-09-12.json'
+        )
+        self.assertEqual(200, response.status_code)
+        self.assertJson(
+            {
+                'start_date': '01.09.2016',
+                'end_date': '12.09.2016',
+                'net_loss': 600,
+                'revenue': [
+                    {
+                        'code': '401',
+                        'name': 'Revenue',
+                        'type': 'revenue',
+                        'balance': 5000
+                    }
+                ],
+                'expense': [
+                    {
+                        'code': '501',
+                        'name': 'Expense',
+                        'type': 'expense',
+                        'balance': 5600
                     }
                 ]
             },

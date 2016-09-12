@@ -80,6 +80,17 @@ class Database(object):
             end_account['balance'] -= start_account['balance']
 
             balance_sheet[end_account['type']].append(end_account)
+        revenues = sum(
+            account['balance'] for account in balance_sheet['revenue']
+        )
+        expenses = sum(
+            account['balance'] for account in balance_sheet['expense']
+        )
+        net_result = revenues - expenses
+        if net_result >= 0:
+            balance_sheet['net_income'] = net_result
+        else:
+            balance_sheet['net_loss'] = -net_result
         return balance_sheet
 
     def get_account(self, code):
