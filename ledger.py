@@ -276,5 +276,16 @@ def get_json_income_statement(start_date, end_date):
     return jsonify(database.get_income_statement(start_date, end_date))
 
 
+@app.route('/income-statements/<start_date>-to-<end_date>.html',
+           methods=['GET'])
+def get_html_income_statement(start_date, end_date):
+    start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
+    end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
+    return render_template(
+        'income_statement.html',
+        income_statement=database.get_income_statement(start_date, end_date)
+    )
+
+
 if __name__ == '__main__':
     app.run()

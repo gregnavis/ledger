@@ -1,0 +1,62 @@
+{% extends "layout.html" %}
+{% block body %}
+  <div class="container">
+		<h1>Income Statement <small>from {{ income_statement.start_date }} to {{ income_statement.end_date }}</small></h1>
+
+    <table class="table">
+      <thead>
+        <tr>
+          <th class="number">Number</th>
+          <th>Name</th>
+          <th class="balance">Balance</th>
+        </tr>
+      </thead>
+      <tbody>
+				<tr><td></td><td colspan="2">Revenues</td></tr>
+        {% for account in income_statement.revenue %}
+          <tr>
+            <td class="number">{{ account.code }}</td>
+            <td>&nbsp;&nbsp;{{ account.name }}</td>
+            <td class="balance">{{ account.balance | monetize }}</td>
+          </tr>
+        {% endfor %}
+        <tr class="total">
+          <td></td>
+          <td>&nbsp;&nbsp;Total Revenues</td>
+          <td class="balance">{{ income_statement.revenue | map(attribute='balance') | sum | monetize }}</td>
+        </tr>
+
+				<tr><td></td><td colspan="2">Expenses</td></tr>
+        {% for account in income_statement.expense %}
+          <tr>
+            <td class="number">{{ account.code }}</td>
+            <td>&nbsp;&nbsp;{{ account.name }}</td>
+            <td class="balance">{{ account.balance | monetize }}</td>
+          </tr>
+        {% endfor %}
+        <tr class="total">
+          <td></td>
+          <td>&nbsp;&nbsp;Total Expenses</td>
+          <td class="balance">{{ income_statement.expense | map(attribute='balance') | sum | monetize }}</td>
+        </tr>
+        <tr class="total">
+          <td></td>
+					<td>
+						{% if income_statement.net_income is defined %}
+							Net Income
+						{% else %}
+							Net Loss
+						{% endif %}
+					</td>
+          <td class="balance">
+						{% if income_statement.net_income is defined %}
+							{{ income_statement.net_income | monetize }}
+						{% else %}
+							{{ income_statement.net_loss | monetize }}
+						{% endif %}
+					</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+{% endblock %}
