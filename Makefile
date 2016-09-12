@@ -7,11 +7,11 @@ precommit: pep8 test
 
 .PHONY: pep8
 pep8:
-	pep8 --max-line-length=80 ledger.py ledger_test.py
+	pep8 --max-line-length=80 ledger.py webapp.py webapp_test.py
 
 .PHONY: test
 test:
-	python ledger_test.py
+	python webapp_test.py
 
 .PHONY: setup
 setup:

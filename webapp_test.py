@@ -1,16 +1,16 @@
 import json
 import unittest
 
-import ledger
+import webapp
 
 
-class LedgerTestCase(unittest.TestCase):
+class WebAppTestCase(unittest.TestCase):
     def setUp(self):
-        ledger.app.config['TESTING'] = True
-        self.app = ledger.app.test_client()
+        webapp.app.config['TESTING'] = True
+        self.app = webapp.app.test_client()
 
     def tearDown(self):
-        ledger.database.reset()
+        webapp.ledger.reset()
 
     def test_create_account(self):
         self.assertEqual(
@@ -587,11 +587,11 @@ class LedgerTestCase(unittest.TestCase):
 
 class MonetizeTestCase(unittest.TestCase):
     def test_monetize(self):
-        self.assertEquals('0.00', ledger.monetize(0))
-        self.assertEquals('0.01', ledger.monetize(1))
-        self.assertEquals('1.00', ledger.monetize(100))
-        self.assertEquals('1,234.00', ledger.monetize(123400))
-        self.assertEquals('-1,000.00', ledger.monetize(-100000))
+        self.assertEquals('0.00', webapp.monetize(0))
+        self.assertEquals('0.01', webapp.monetize(1))
+        self.assertEquals('1.00', webapp.monetize(100))
+        self.assertEquals('1,234.00', webapp.monetize(123400))
+        self.assertEquals('-1,000.00', webapp.monetize(-100000))
 
 
 if __name__ == '__main__':
