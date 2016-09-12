@@ -274,6 +274,8 @@ class LedgerTestCase(unittest.TestCase):
         self._create_account('102', 'Equipment', 'asset')
         self._create_account('201', 'Bank Loan', 'liability')
         self._create_account('320', 'Share Capital', 'equity')
+        self._create_account('401', 'Revenue', 'revenue')
+        self._create_account('501', 'Expense', 'expense')
         self._record_transaction(
             '2016-09-01',
             "Record the founder's investment",
@@ -342,6 +344,62 @@ class LedgerTestCase(unittest.TestCase):
                         'name': 'Cash',
                         'type': 'asset',
                         'balance': 9500
+                    },
+                    {
+                        'code': '102',
+                        'name': 'Equipment',
+                        'type': 'asset',
+                        'balance': 2000
+                    },
+                ],
+                'liability': [
+                    {
+                        'code': '201',
+                        'name': 'Bank Loan',
+                        'type': 'liability',
+                        'balance': 1500
+                    }
+                ],
+                'equity': [
+                    {
+                        'code': '320',
+                        'name': 'Share Capital',
+                        'type': 'equity',
+                        'balance': 10000
+                    }
+                ]
+            },
+            response
+        )
+
+        self._record_transaction(
+            '2016-09-11',
+            "Software consulting for Acme Inc.",
+            [
+                {'account_code': '101', 'amount': 5000},
+                {'account_code': '401', 'amount': -5000},
+            ]
+        )
+        self._record_transaction(
+            '2016-09-11',
+            "Business travel",
+            [
+                {'account_code': '101', 'amount': -500},
+                {'account_code': '501', 'amount': 500},
+            ]
+        )
+
+        response = self.app.get('/balance-sheets/2016-09-11.json')
+        self.assertEqual(200, response.status_code)
+        self.assertJson(
+            {
+                'date': '11.09.2016',
+                'asset': [
+                    {
+                        'code': '101',
+                        'name': 'Cash',
+                        'type': 'asset',
+                        'balance': 14000
                     },
                     {
                         'code': '102',

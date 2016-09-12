@@ -47,6 +47,8 @@ class Database(object):
             'equity': []
         }
         for account in accounts:
+            if account['type'] not in balance_sheet:
+                continue
             account = copy(account)
             if account['type'] in ('liability', 'equity'):
                 account['balance'] = -account['balance']
