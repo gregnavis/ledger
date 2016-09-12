@@ -47,6 +47,9 @@ class Database(object):
             'equity': []
         }
         for account in accounts:
+            account = copy(account)
+            if account['type'] in ('liability', 'equity'):
+                account['balance'] = -account['balance']
             balance_sheet[account['type']].append(account)
         return balance_sheet
 

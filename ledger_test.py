@@ -250,6 +250,7 @@ class LedgerTestCase(unittest.TestCase):
     def test_get_balance_sheet(self):
         self._create_account('101', 'Cash', 'asset')
         self._create_account('102', 'Equipment', 'asset')
+        self._create_account('201', 'Bank Loan', 'liability')
         self._create_account('320', 'Share Capital', 'equity')
         self._record_transaction(
             '2016-09-01',
@@ -263,8 +264,9 @@ class LedgerTestCase(unittest.TestCase):
             '2016-09-10',
             "Buy a computer",
             [
-                {'account_code': '101', 'amount': -2000},
-                {'account_code': '102', 'amount': 2000}
+                {'account_code': '102', 'amount': 2000},
+                {'account_code': '101', 'amount': -500},
+                {'account_code': '201', 'amount': -1500},
             ]
         )
 
@@ -287,13 +289,20 @@ class LedgerTestCase(unittest.TestCase):
                         'balance': 0
                     },
                 ],
-                'liability': [],
+                'liability': [
+                    {
+                        'code': '201',
+                        'name': 'Bank Loan',
+                        'type': 'liability',
+                        'balance': 0
+                    }
+                ],
                 'equity': [
                     {
                         'code': '320',
                         'name': 'Share Capital',
                         'type': 'equity',
-                        'balance': -10000
+                        'balance': 10000
                     }
                 ]
             },
@@ -310,7 +319,7 @@ class LedgerTestCase(unittest.TestCase):
                         'code': '101',
                         'name': 'Cash',
                         'type': 'asset',
-                        'balance': 8000
+                        'balance': 9500
                     },
                     {
                         'code': '102',
@@ -319,13 +328,20 @@ class LedgerTestCase(unittest.TestCase):
                         'balance': 2000
                     },
                 ],
-                'liability': [],
+                'liability': [
+                    {
+                        'code': '201',
+                        'name': 'Bank Loan',
+                        'type': 'liability',
+                        'balance': 1500
+                    }
+                ],
                 'equity': [
                     {
                         'code': '320',
                         'name': 'Share Capital',
                         'type': 'equity',
-                        'balance': -10000
+                        'balance': 10000
                     }
                 ]
             },
