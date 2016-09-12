@@ -55,6 +55,33 @@ class Database(object):
             balance_sheet[account['type']].append(account)
         return balance_sheet
 
+    def get_income_statement(self, start_date, end_date):
+        '''Return an income statement.'''
+        start_accounts = {account['code']: account
+                          for account in self.get_accounts(start_date)}
+        end_accounts = {account['code']: account
+                        for account in self.get_accounts(end_date)}
+        balance_sheet = {
+            'start_date': start_date.strftime('%d.%m.%Y'),
+            'end_date': end_date.strftime('%d.%m.%Y'),
+            'revenue': [], 'expense': []
+        }
+        for code, end_account in end_accounts.iteritems():
+            if end_account['type'] not in balance_sheet:
+                continue
+
+            start_account = copy(start_accounts[code])
+            end_account = copy(end_account)
+
+            if end_account['type'] == 'revenue':
+                start_account['balance'] = -start_account['balance']
+                end_account['balance'] = -end_account['balance']
+
+            end_account['balance'] -= start_account['balance']
+
+            balance_sheet[end_account['type']].append(end_account)
+        return balance_sheet
+
     def get_account(self, code):
         '''Return the account identified by the specified code.'''
         code = str(code)
@@ -228,6 +255,14 @@ def get_html_balance_sheet(date):
     date = datetime.strptime(date, '%Y-%m-%d').date()
     return render_template('balance_sheet.html',
                            balance_sheet=database.get_balance_sheet(date))
+
+
+@app.route('/income-statements/<start_date>-to-<end_date>.json',
+           methods=['GET'])
+def get_json_income_statement(start_date, end_date):
+    start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
+    end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
+    return jsonify(database.get_income_statement(start_date, end_date))
 
 
 if __name__ == '__main__':

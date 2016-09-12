@@ -428,6 +428,103 @@ class LedgerTestCase(unittest.TestCase):
             response
         )
 
+    def test_get_income_statement(self):
+        self._create_account('101', 'Cash', 'asset')
+        self._create_account('102', 'Equipment', 'asset')
+        self._create_account('201', 'Bank Loan', 'liability')
+        self._create_account('320', 'Share Capital', 'equity')
+        self._create_account('401', 'Revenue', 'revenue')
+        self._create_account('501', 'Expense', 'expense')
+        self._record_transaction(
+            '2016-09-01',
+            "Record the founder's investment",
+            [
+                {'account_code': '101', 'amount': 10000},
+                {'account_code': '320', 'amount': -10000}
+            ]
+        )
+        self._record_transaction(
+            '2016-09-10',
+            "Buy a computer",
+            [
+                {'account_code': '102', 'amount': 2000},
+                {'account_code': '101', 'amount': -500},
+                {'account_code': '201', 'amount': -1500},
+            ]
+        )
+        self._record_transaction(
+            '2016-09-11',
+            'Software consulting for Acme Inc.',
+            [
+                {'account_code': '101', 'amount': 5000},
+                {'account_code': '401', 'amount': -5000},
+            ]
+        )
+        self._record_transaction(
+            '2016-09-11',
+            'Business Travel',
+            [
+                {'account_code': '101', 'amount': -400},
+                {'account_code': '501', 'amount': 400},
+            ]
+        )
+
+        response = self.app.get(
+            '/income-statements/2016-09-01-to-2016-09-10.json'
+        )
+        self.assertEqual(200, response.status_code)
+        self.assertJson(
+            {
+                'start_date': '01.09.2016',
+                'end_date': '10.09.2016',
+                'revenue': [
+                    {
+                        'code': '401',
+                        'name': 'Revenue',
+                        'type': 'revenue',
+                        'balance': 0
+                    }
+                ],
+                'expense': [
+                    {
+                        'code': '501',
+                        'name': 'Expense',
+                        'type': 'expense',
+                        'balance': 0
+                    }
+                ]
+            },
+            response
+        )
+
+        response = self.app.get(
+            '/income-statements/2016-09-01-to-2016-09-11.json'
+        )
+        self.assertEqual(200, response.status_code)
+        self.assertJson(
+            {
+                'start_date': '01.09.2016',
+                'end_date': '11.09.2016',
+                'revenue': [
+                    {
+                        'code': '401',
+                        'name': 'Revenue',
+                        'type': 'revenue',
+                        'balance': 5000
+                    }
+                ],
+                'expense': [
+                    {
+                        'code': '501',
+                        'name': 'Expense',
+                        'type': 'expense',
+                        'balance': 400
+                    }
+                ]
+            },
+            response
+        )
+
     def _create_account(self, code, name, type):
         return self._post_json('/accounts', {'code': code, 'name': name,
                                              'type': type})
