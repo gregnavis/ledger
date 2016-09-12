@@ -26,6 +26,28 @@ class LedgerTestCase(unittest.TestCase):
             response
         )
 
+    def test_create_account_types(self):
+        self.assertEqual(
+            201,
+            self._create_account('101', 'Cash', 'asset').status_code
+        )
+        self.assertEqual(
+            201,
+            self._create_account('201', 'Bank Loan', 'liability').status_code
+        )
+        self.assertEqual(
+            201,
+            self._create_account('301', 'Share Capital', 'equity').status_code
+        )
+        self.assertEqual(
+            201,
+            self._create_account('401', 'Revenue', 'revenue').status_code
+        )
+        self.assertEqual(
+            201,
+            self._create_account('501', 'Expense', 'expense').status_code
+        )
+
     def test_create_account_twice(self):
         self._create_account('101', 'Cash', 'asset')
         self.assertEqual(

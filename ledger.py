@@ -158,8 +158,9 @@ def create_account():
         return 'Missing "code"', 400
     if 'type' not in request.json:
         return 'Missing "type"', 400
-    if request.json['type'] not in ('asset', 'liability', 'equity'):
-        return '"type" must be one of "asset", "liability", "equity"', 400
+    allowed_types = ('asset', 'liability', 'equity', 'revenue', 'expense')
+    if request.json['type'] not in allowed_types:
+        return '"type" must be one of {}'.format(', '.join(allowed_types)), 400
 
     try:
         database.create_account(request.json['code'], request.json['name'],
