@@ -200,6 +200,44 @@ class LedgerError(RuntimeError):
 
 Account = namedtuple('Account', 'code name type')
 Transaction = namedtuple('Transaction', 'date description items')
-BalanceSheet = namedtuple('BalanceSheet', 'date asset liability equity')
-IncomeStatement = namedtuple('IncomeStatement',
-                             'start_date end_date revenue expense')
+
+
+class BalanceSheet(namedtuple('BalanceSheet', 'date asset liability equity')):
+    @property
+    def total_assets(self):
+        return sum(self.asset.itervalues())
+
+    @property
+    def total_liabilities(self):
+        return -sum(self.liability.itervalues())
+
+    @property
+    def total_equity(self):
+        return -sum(self.equity.itervalues())
+
+
+class IncomeStatement(namedtuple('_IncomeStatement',
+                                 'start_date end_date revenue expense')):
+    @property
+    def total_revenues(self):
+        return -sum(self.revenue.itervalues())
+
+    @property
+    def total_expenses(self):
+        return sum(self.expense.itervalues())
+
+    @property
+    def net_result(self):
+        return self.total_revenues - self.total_expenses
+
+    @property
+    def net_income(self):
+        if self.net_result >= 0:
+            return self.net_result
+        return 0
+
+    @property
+    def net_loss(self):
+        if self.net_result < 0:
+            return - self.net_result
+        return 0

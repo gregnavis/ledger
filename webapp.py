@@ -71,18 +71,13 @@ def _income_statement_to_json(income_statement):
         'start_date': income_statement.start_date.strftime('%d.%m.%Y'),
         'end_date': income_statement.end_date.strftime('%d.%m.%Y'),
         'expense': _accounts_to_json(income_statement.expense),
-        'revenue': _accounts_to_json(income_statement.revenue)
+        'revenue': _accounts_to_json(income_statement.revenue),
     }
 
-    # Revenues are credited hence are negative. The minus converts them to a
-    # positive value.
-    total_revenues = -sum(income_statement.revenue.itervalues())
-    total_expenses = sum(income_statement.expense.itervalues())
-    net_result = total_revenues - total_expenses
-    if net_result >= 0:
-        result['net_income'] = net_result
+    if income_statement.net_result >= 0:
+        result['net_income'] = income_statement.net_income
     else:
-        result['net_loss'] = -net_result
+        result['net_loss'] = income_statement.net_loss
     return result
 
 
