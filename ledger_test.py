@@ -130,6 +130,7 @@ class LedgerTestCase(unittest.TestCase):
                 equity={
                     Account('301', 'Share Capital', 'equity'): -500000,
                 },
+                retained_earnings=0
             ),
             self.ledger.get_balance_sheet(date(2016, 9, 1))
         )

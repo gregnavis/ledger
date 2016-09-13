@@ -72,16 +72,20 @@ class Ledger(object):
             FROM accounts a
             LEFT JOIN transaction_items ti ON a.code = ti.account_code
             LEFT JOIN transactions t ON ti.transaction_id = t.id
-            WHERE a.type IN ("asset", "liability", "equity")
             GROUP BY a.code
         ''', (date,)).fetchall()
 
+        retained_earnings = 0
         accounts_by_type = {'asset': {}, 'liability': {}, 'equity': {}}
         for code, name, type, balance in rows:
-            accounts_by_type[type][Account(code, name, type)] = balance
+            if type in ('revenue', 'expense'):
+                retained_earnings -= balance
+            else:
+                accounts_by_type[type][Account(code, name, type)] = balance
 
         return BalanceSheet(
             date=date,
+            retained_earnings=retained_earnings,
             **accounts_by_type
         )
 
@@ -215,7 +219,8 @@ Account = namedtuple('Account', 'code name type')
 Transaction = namedtuple('Transaction', 'date description items')
 
 
-class BalanceSheet(namedtuple('BalanceSheet', 'date asset liability equity')):
+class BalanceSheet(namedtuple('BalanceSheet',
+                              'date asset liability equity retained_earnings')):
     @property
     def total_assets(self):
         return sum(self.asset.itervalues())
@@ -226,7 +231,7 @@ class BalanceSheet(namedtuple('BalanceSheet', 'date asset liability equity')):
 
     @property
     def total_equity(self):
-        return -sum(self.equity.itervalues())
+        return -sum(self.equity.itervalues()) + self.retained_earnings
 
 
 class IncomeStatement(namedtuple('_IncomeStatement',

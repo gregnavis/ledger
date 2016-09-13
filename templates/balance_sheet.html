@@ -77,6 +77,11 @@
                 <td class="balance">{{ -balance | monetize }}</td>
               </tr>
             {% endfor %}
+            <tr>
+              <td class="number"></td>
+              <td>Retained Earnings</td>
+              <td class="balance">{{ balance_sheet.retained_earnings | monetize }}</td>
+            </tr>
             <tr class="total">
               <td></td>
               <td>Total Equity</td>
