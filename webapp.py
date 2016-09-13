@@ -111,7 +111,7 @@ def _income_statement_to_json(income_statement):
 @app.template_filter('monetize')
 def monetize(value):
     value = Decimal(value) / 100
-    locale.setlocale(locale.LC_MONETARY, 'en_US')
+    locale.setlocale(locale.LC_MONETARY, ('en_US', 'UTF-8'))
     return locale.currency(value, False, True)
 
 
