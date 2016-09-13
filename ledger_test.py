@@ -8,8 +8,9 @@ from ledger import Account, BalanceSheet, IncomeStatement, Ledger, \
 
 class LedgerTestCase(unittest.TestCase):
     def setUp(self):
-        self.db = sqlite3.connect(':memory:')
+        self.db = sqlite3.connect('test.sqlite3')
         self.ledger = Ledger(self.db)
+        self.ledger.reset()
 
     def test_create_account(self):
         self.ledger.create_account('101', 'Cash', 'asset')

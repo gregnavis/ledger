@@ -35,6 +35,33 @@ def get_ledger():
     return g.ledger
 
 
+def init_ledger():
+    get_ledger().init()
+
+
+def drop_ledger():
+    get_ledger().drop()
+
+
+def reset_ledger():
+    get_ledger().reset()
+
+
+@app.cli.command('init')
+def init_ledger_command():
+    init_ledger()
+
+
+@app.cli.command('drop')
+def drop_ledger_command():
+    drop_ledger()
+
+
+@app.cli.command('reset')
+def reset_ledger_command():
+    reset_ledger()
+
+
 @app.teardown_appcontext
 def close_db(error):
     if hasattr(g, 'db'):

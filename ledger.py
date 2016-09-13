@@ -10,29 +10,42 @@ class Ledger(object):
 
     def __init__(self, database):
         self.db = database
-        self.reset()
 
-    def reset(self):
-        '''Reset the ledger.'''
+    def init(self):
+        '''Initialize the database.'''
         self.db.executescript('''
-        DROP TABLE IF EXISTS accounts;
-        CREATE TABLE accounts(
+        CREATE TABLE IF NOT EXISTS accounts(
             code VARCHAR(255) PRIMARY KEY,
             name VARCHAR(255) NOT NULL,
             type VARCHAR(255) NOT NULL
         );
-        CREATE TABLE transactions(
+        CREATE TABLE IF NOT EXISTS transactions(
             id INTEGER PRIMARY KEY,
             date VARCHAR(255) NOT NULL,
             description VARCHAR(255) NOT NULL
         );
-        CREATE TABLE transaction_items(
+        CREATE TABLE IF NOT EXISTS transaction_items(
             id INTEGER PRIMARY KEY,
             transaction_id INTEGER NOT NULL REFERENCES transactions(id),
             account_code VARCHAR(255) NOT NULL REFERENCES accounts(code),
             amount INTEGER NOT NULL
         );
         ''')
+        self.db.commit()
+
+    def drop(self):
+        '''Reset the ledger.'''
+        self.db.executescript('''
+        DROP TABLE IF EXISTS transaction_items;
+        DROP TABLE IF EXISTS transactions;
+        DROP TABLE IF EXISTS accounts;
+        ''')
+        self.db.commit()
+
+    def reset(self):
+        '''Reset the ledger.'''
+        self.drop()
+        self.init()
 
     def create_account(self, code, name, type):
         '''Create an account with a given code and name.'''

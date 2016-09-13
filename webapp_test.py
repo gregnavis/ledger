@@ -7,8 +7,10 @@ import webapp
 class WebAppTestCase(unittest.TestCase):
     def setUp(self):
         webapp.app.config['TESTING'] = True
-        webapp.app.config['DATABASE_URL'] = ':memory:'
+        webapp.app.config['DATABASE_URL'] = 'test.sqlite3'
         self.app = webapp.app.test_client()
+        with webapp.app.app_context():
+            webapp.reset_ledger()
 
     def test_create_account_and_get_account(self):
         with webapp.app.app_context():
