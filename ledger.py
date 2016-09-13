@@ -1,156 +1,205 @@
+from collections import namedtuple
 from copy import copy
 from datetime import datetime
 import re
+import sqlite3
 
 
 class Ledger(object):
-    def __init__(self):
+    ACCOUNT_TYPES = ('asset', 'liability', 'equity', 'revenue', 'expense')
+
+    def __init__(self, database):
+        self.db = database
         self.reset()
 
     def reset(self):
-        '''Reset the ledger (for testing purposes).'''
-        self.accounts = []
-        self.transactions = []
+        '''Reset the ledger.'''
+        self.db.executescript('''
+        DROP TABLE IF EXISTS accounts;
+        CREATE TABLE accounts(
+            code VARCHAR(255) PRIMARY KEY,
+            name VARCHAR(255) NOT NULL,
+            type VARCHAR(255) NOT NULL
+        );
+        CREATE TABLE transactions(
+            id INTEGER PRIMARY KEY,
+            date VARCHAR(255) NOT NULL,
+            description VARCHAR(255) NOT NULL
+        );
+        CREATE TABLE transaction_items(
+            id INTEGER PRIMARY KEY,
+            transaction_id INTEGER NOT NULL REFERENCES transactions(id),
+            account_code VARCHAR(255) NOT NULL REFERENCES accounts(code),
+            amount INTEGER NOT NULL
+        );
+        ''')
 
     def create_account(self, code, name, type):
         '''Create an account with a given code and name.'''
-        code = str(code)
-        name = str(name)
-
+        if type not in self.ACCOUNT_TYPES:
+            raise ValueError('unknown account type {}'.format(type))
         if self.get_account(code):
             raise LedgerError('The account "{}" already exists'.format(code))
-
-        self.accounts.append({
-            'code': code, 'name': name, 'type': type, 'balance': 0
-        })
-
-    def get_accounts(self, date):
-        '''Return all accounts.'''
-        return [self._get_account_at(account, date)
-                for account in self.accounts]
+        self.db.execute(
+            'INSERT INTO accounts(code, name, type) VALUES (?, ?, ?)',
+            (code, name, type)
+        ).close()
+        self.db.commit()
 
     def get_balance_sheet(self, date):
         '''Return a balance sheet.'''
-        accounts = self.get_accounts(date)
-        balance_sheet = {
-            'date': date.strftime('%d.%m.%Y'), 'asset': [], 'liability': [],
-            'equity': []
-        }
-        for account in accounts:
-            if account['type'] not in balance_sheet:
-                continue
-            account = copy(account)
-            if account['type'] in ('liability', 'equity'):
-                account['balance'] = -account['balance']
-            balance_sheet[account['type']].append(account)
-        return balance_sheet
+        rows = self.db.execute('''
+        SELECT
+            a.code, a.name, a.type, SUM(
+                CASE
+                    WHEN date(t.date) <= date(?) THEN ti.amount
+                    ELSE 0
+                END
+            )
+            FROM accounts a
+            LEFT JOIN transaction_items ti ON a.code = ti.account_code
+            LEFT JOIN transactions t ON ti.transaction_id = t.id
+            WHERE a.type IN ("asset", "liability", "equity")
+            GROUP BY a.code
+        ''', (date,)).fetchall()
+
+        accounts_by_type = {'asset': {}, 'liability': {}, 'equity': {}}
+        for code, name, type, balance in rows:
+            accounts_by_type[type][Account(code, name, type)] = balance
+
+        return BalanceSheet(
+            date=date,
+            **accounts_by_type
+        )
 
     def get_income_statement(self, start_date, end_date):
         '''Return an income statement.'''
-        start_accounts = {account['code']: account
-                          for account in self.get_accounts(start_date)}
-        end_accounts = {account['code']: account
-                        for account in self.get_accounts(end_date)}
-        balance_sheet = {
-            'start_date': start_date.strftime('%d.%m.%Y'),
-            'end_date': end_date.strftime('%d.%m.%Y'),
-            'revenue': [], 'expense': []
-        }
-        for code, end_account in end_accounts.iteritems():
-            if end_account['type'] not in balance_sheet:
-                continue
+        rows = self.db.execute('''
+        SELECT
+            a.code, a.name, a.type, SUM(
+                CASE
+                    WHEN date(?) <= date(t.date) AND date(t.date) <= date(?)
+                        THEN ti.amount
+                    ELSE 0
+                END
+            )
+            FROM accounts a
+            LEFT JOIN transaction_items ti ON a.code = ti.account_code
+            LEFT JOIN transactions t ON ti.transaction_id = t.id
+            WHERE a.type IN ("revenue", "expense")
+            GROUP BY a.code
+        ''', (start_date, end_date)).fetchall()
 
-            start_account = copy(start_accounts[code])
-            end_account = copy(end_account)
+        accounts_by_type = {'revenue': {}, 'expense': {}}
+        for code, name, type, balance in rows:
+            accounts_by_type[type][Account(code, name, type)] = balance
 
-            if end_account['type'] == 'revenue':
-                start_account['balance'] = -start_account['balance']
-                end_account['balance'] = -end_account['balance']
-
-            end_account['balance'] -= start_account['balance']
-
-            balance_sheet[end_account['type']].append(end_account)
-        revenues = sum(
-            account['balance'] for account in balance_sheet['revenue']
+        return IncomeStatement(
+            start_date=start_date,
+            end_date=end_date,
+            **accounts_by_type
         )
-        expenses = sum(
-            account['balance'] for account in balance_sheet['expense']
-        )
-        net_result = revenues - expenses
-        if net_result >= 0:
-            balance_sheet['net_income'] = net_result
-        else:
-            balance_sheet['net_loss'] = -net_result
-        return balance_sheet
 
     def get_account(self, code):
         '''Return the account identified by the specified code.'''
-        code = str(code)
-
-        for account in self.accounts:
-            if code == account['code']:
-                return account
-        else:
+        row = self.db.execute('SELECT * FROM accounts WHERE code = ?',
+                              (code,)).fetchone()
+        if row is None:
             return None
+        return Account(row[0], row[1], row[2])
 
     def record_transaction(self, date, description, items):
         '''Record a transaction.'''
+        if not items:
+            raise ValueError('cannot record an empty transaction')
+        if sum(item[1] for item in items) != 0:
+            raise ValueError('unbalanced transaction items')
+
         try:
-            date = datetime.strptime(date, '%Y-%m-%d').date()
-        except ValueError:
-            raise LedgerError(
-                '"{}" is not in the required format "YYYY-MM-DD"'.format(date)
+            c = self.db.cursor()
+            c.execute(
+                'INSERT INTO transactions(date, description) VALUES (?, ?)',
+                (date.strftime('%Y-%m-%d'), description)
             )
+            tx_id = c.lastrowid
 
-        if sum(item['amount'] for item in items) != 0:
-            raise LedgerError('unbalanced transaction items')
-
-        # Check whether all accounts exist
-        for item in items:
-            if not self.get_account(item['account_code']):
-                raise LedgerError(
-                    'The account "{}" does not exist'.format(
-                        item['account_code']
-                    )
+            for account_code, amount in items:
+                c.execute(
+                    'SELECT 1 FROM accounts WHERE code = ?',
+                    (account_code,)
                 )
+                if c.fetchone() is None:
+                    raise ValueError(
+                        'unknown account code {}'.format(account_code)
+                    )
+                c.execute('''INSERT INTO transaction_items(transaction_id,
+                                                           account_code,
+                                                           amount)
+                                                           VALUES (?, ?, ?)''',
+                          (tx_id, account_code, amount))
+        except:
+            self.db.rollback()
+            raise
+        finally:
+            c.close()
 
-        self.transactions.append({
-            'date': date, 'description': description, 'items': items
-        })
+        self.db.commit()
+        return tx_id
 
-        # Update the accounts's balances
-        for item in items:
-            self.get_account(item['account_code'])['balance'] += item['amount']
+    def count_transactions(self):
+        '''Return the number of transactions.'''
+        return self.db.execute(
+            'SELECT COUNT(*) FROM transactions'
+        ).fetchone()[0]
 
-        return len(self.transactions)
+    def count_transaction_items(self):
+        '''Return the number of transaction items.'''
+        return self.db.execute(
+            'SELECT COUNT(*) FROM transaction_items'
+        ).fetchone()[0]
 
     def get_transactions(self):
-        return self.transactions
+        '''Return all registered transactions.'''
+        txs = {}
 
-    def get_transaction(self, id):
-        try:
-            return self.transactions[id - 1]
-        except IndexError:
+        rows = self.db.execute('SELECT * FROM transactions').fetchall()
+        for tx_id, date, description in rows:
+            date = datetime.strptime(date, '%Y-%m-%d').date()
+            txs[tx_id] = Transaction(date, description, [])
+
+        rows = self.db.execute('SELECT * FROM transaction_items').fetchall()
+        for _, tx_id, account_code, amount in rows:
+            txs[tx_id].items.append((account_code, amount))
+
+        return txs.values()
+
+    def get_transaction(self, tx_id):
+        '''Return the specified transaction.'''
+        row = self.db.execute('SELECT * FROM transactions WHERE id = ?',
+                              (tx_id,)).fetchone()
+        if row is None:
             return None
 
-    def _get_account_at(self, account, date):
-        account = copy(account)
-        account.update({
-            'balance': sum(
-                item['amount']
-                for item in self._get_transaction_items(account['code'], date)
-            )
-        })
-        return account
+        date = datetime.strptime(row[1], '%Y-%m-%d').date()
+        description = row[2]
 
-    def _get_transaction_items(self, account_code, date):
-        for transaction in self.transactions:
-            if transaction['date'] > date:
-                continue
-            for item in transaction['items']:
-                if item['account_code'] == account_code:
-                    yield item
+        items = []
+        rows = self.db.execute(
+            'SELECT * FROM transaction_items WHERE transaction_id = ?',
+            (tx_id,)
+        ).fetchall()
+        for row in rows:
+            items.append((row[2], row[3]))
+
+        return Transaction(date, description, items)
 
 
 class LedgerError(RuntimeError):
     pass
+
+
+Account = namedtuple('Account', 'code name type')
+Transaction = namedtuple('Transaction', 'date description items')
+BalanceSheet = namedtuple('BalanceSheet', 'date asset liability equity')
+IncomeStatement = namedtuple('IncomeStatement',
+                             'start_date end_date revenue expense')

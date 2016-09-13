@@ -12,6 +12,7 @@ pep8:
 .PHONY: test
 test:
 	python webapp_test.py
+	python ledger_test.py
 
 .PHONY: setup
 setup:

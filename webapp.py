@@ -1,23 +1,89 @@
 from datetime import datetime
 from decimal import Decimal
 import locale
+import os
+import sqlite3
 
-from flask import Flask, jsonify, render_template, request
+from flask import Flask, g, jsonify, render_template, request
 
 from ledger import Ledger, LedgerError
 
 app = Flask(__name__)
+app.config.update(dict(
+    DATABASE_URL=os.path.join(app.root_path, 'database.sqlite3')
+))
 
 
-ledger = Ledger()
+def connect_db():
+    db = sqlite3.connect(app.config['DATABASE_URL'])
+    return db
+
+
+def get_db():
+    if not hasattr(g, 'db'):
+        g.db = connect_db()
+    return g.db
+
+
+def create_ledger():
+    return Ledger(get_db())
+
+
+def get_ledger():
+    if not hasattr(g, 'ledger'):
+        g.ledger = create_ledger()
+    return g.ledger
+
+
+@app.teardown_appcontext
+def close_db(error):
+    if hasattr(g, 'db'):
+        g.db.close()
 
 
 def _transaction_to_json(transaction):
     return {
-        'date': transaction['date'].strftime('%Y-%m-%d'),
-        'description': transaction['description'],
-        'items': transaction['items']
+        'date': transaction.date.strftime('%Y-%m-%d'),
+        'description': transaction.description,
+        'items': [
+            {'account_code': item[0], 'amount': item[1]}
+            for item in transaction.items
+        ]
     }
+
+
+def _account_to_json(account, balance=None):
+    result = {'code': account.code, 'name': account.name, 'type': account.type}
+    if balance is not None:
+        if account.type in ('equity', 'liability', 'revenue'):
+            balance = -balance
+        result['balance'] = balance
+    return result
+
+
+def _accounts_to_json(accounts_and_balances):
+    return [_account_to_json(account, balance)
+            for account, balance in accounts_and_balances.iteritems()]
+
+
+def _income_statement_to_json(income_statement):
+    result = {
+        'start_date': income_statement.start_date.strftime('%d.%m.%Y'),
+        'end_date': income_statement.end_date.strftime('%d.%m.%Y'),
+        'expense': _accounts_to_json(income_statement.expense),
+        'revenue': _accounts_to_json(income_statement.revenue)
+    }
+
+    # Revenues are credited hence are negative. The minus converts them to a
+    # positive value.
+    total_revenues = -sum(income_statement.revenue.itervalues())
+    total_expenses = sum(income_statement.expense.itervalues())
+    net_result = total_revenues - total_expenses
+    if net_result >= 0:
+        result['net_income'] = net_result
+    else:
+        result['net_loss'] = -net_result
+    return result
 
 
 @app.template_filter('monetize')
@@ -29,9 +95,9 @@ def monetize(value):
 
 @app.route('/accounts/<code>', methods=['GET'])
 def get_account(code):
-    account = ledger.get_account(code)
+    account = get_ledger().get_account(code)
     if account:
-        return jsonify(account)
+        return jsonify(code=account.code, name=account.name, type=account.type)
     else:
         return 'Account "{}" does not exist'.format(code), 404
 
@@ -51,8 +117,8 @@ def create_account():
         return '"type" must be one of {}'.format(', '.join(allowed_types)), 400
 
     try:
-        ledger.create_account(request.json['code'], request.json['name'],
-                              request.json['type'])
+        get_ledger().create_account(request.json['code'], request.json['name'],
+                                    request.json['type'])
         return 'Created', 201
     except LedgerError as exc:
         return str(exc), 409
@@ -60,7 +126,7 @@ def create_account():
 
 @app.route('/transactions/<int:id>', methods=['GET'])
 def get_transaction(id):
-    transaction = ledger.get_transaction(id)
+    transaction = get_ledger().get_transaction(id)
     if transaction:
         return jsonify(_transaction_to_json(transaction))
     else:
@@ -69,7 +135,7 @@ def get_transaction(id):
 
 @app.route('/transactions', methods=['GET'])
 def get_transactions():
-    transactions = ledger.get_transactions()
+    transactions = get_ledger().get_transactions()
     return jsonify({
         'transactions': [
             _transaction_to_json(transaction) for transaction in transactions
@@ -93,27 +159,35 @@ def record_transaction():
         return 'All items must contain "amount"', 400
 
     try:
-        transaction_id = ledger.record_transaction(
-            request.json['date'],
+        date = datetime.strptime(request.json['date'], '%Y-%m-%d').date()
+        transaction_id = get_ledger().record_transaction(
+            date,
             request.json['description'],
-            request.json['items']
+            [[item['account_code'], item['amount']]
+             for item in request.json['items']]
         )
         return str(transaction_id), 201
-    except LedgerError as exc:
+    except (ValueError, LedgerError) as exc:
         return str(exc), 400
 
 
 @app.route('/balance-sheets/<date>.json', methods=['GET'])
 def get_json_balance_sheet(date):
     date = datetime.strptime(date, '%Y-%m-%d').date()
-    return jsonify(ledger.get_balance_sheet(date))
+    balance_sheet = get_ledger().get_balance_sheet(date)
+    return jsonify(
+        date=balance_sheet.date.strftime('%d.%m.%Y'),
+        asset=_accounts_to_json(balance_sheet.asset),
+        liability=_accounts_to_json(balance_sheet.liability),
+        equity=_accounts_to_json(balance_sheet.equity)
+    )
 
 
 @app.route('/balance-sheets/<date>.html', methods=['GET'])
 def get_html_balance_sheet(date):
     date = datetime.strptime(date, '%Y-%m-%d').date()
     return render_template('balance_sheet.html',
-                           balance_sheet=ledger.get_balance_sheet(date))
+                           balance_sheet=get_ledger().get_balance_sheet(date))
 
 
 @app.route('/income-statements/<start_date>-to-<end_date>.json',
@@ -121,7 +195,10 @@ def get_html_balance_sheet(date):
 def get_json_income_statement(start_date, end_date):
     start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
     end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
-    return jsonify(ledger.get_income_statement(start_date, end_date))
+    income_statement = get_ledger().get_income_statement(start_date, end_date)
+    return jsonify(
+            **_income_statement_to_json(income_statement)
+    )
 
 
 @app.route('/income-statements/<start_date>-to-<end_date>.html',
@@ -131,7 +208,7 @@ def get_html_income_statement(start_date, end_date):
     end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
     return render_template(
         'income_statement.html',
-        income_statement=ledger.get_income_statement(start_date, end_date)
+        income_statement=get_ledger().get_income_statement(start_date, end_date)
     )
 
 
